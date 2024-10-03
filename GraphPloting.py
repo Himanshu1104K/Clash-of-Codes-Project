@@ -7,7 +7,7 @@ from itertools import count
 import io
 
 index = count()  # Generator to simulate real-time data updates
-df = pd.read_csv("data.csv")  # Load your CSV data
+df = pd.read_csv("Machine_Learning_Model/Trainingdata.csv")  # Load your CSV data
 
 app = Flask(__name__)
 
