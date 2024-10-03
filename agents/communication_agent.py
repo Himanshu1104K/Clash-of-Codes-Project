@@ -1,9 +1,10 @@
-from uagents import Agent, Task
+from uagents import Agent
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 import pandas as pd
 import threading
+import os
 
 
 class CommunicationAgent(Agent):
@@ -14,7 +15,7 @@ class CommunicationAgent(Agent):
         prediction_agent,
         host="0.0.0.0",
         port=5000,
-        jwt_secret="your-secret-key",
+        jwt_secret=os.getenv("JWT_SECRET_KEY", "fallback-default-key"),
     ):
         super().__init__(name)
         self.data_file = data_file
@@ -76,8 +77,8 @@ if __name__ == "__main__":
     prediction_agent = PredictionAgent(
         name="PredictionAgent",
         data_file="../data.csv",
-        model_file="../model.pkl",
-        interval=300,  # 5 minutes
+        model_file="../Machine_Learning_Model/model.pkl",
+        interval=10,
     )
     communication_agent = CommunicationAgent(
         name="CommunicationAgent",
@@ -85,7 +86,7 @@ if __name__ == "__main__":
         prediction_agent=prediction_agent,
         host="0.0.0.0",
         port=5000,
-        jwt_secret="your-secret-key",
+        jwt_secret=os.getenv("JWT_SECRET_KEY", "fallback-default-key"),
     )
     # Run agents in separate threads
     import threading

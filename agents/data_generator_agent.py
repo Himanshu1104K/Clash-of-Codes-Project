@@ -83,6 +83,6 @@ class DataGeneratorAgent(Agent):
 
 if __name__ == "__main__":
     agent = DataGeneratorAgent(
-        name="DataGenerator", data_file="../data.csv", interval=1
+        name="DataGenerator", data_file="../data.csv", interval=10
     )
     agent.run()

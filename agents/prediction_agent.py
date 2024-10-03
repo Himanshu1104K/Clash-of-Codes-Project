@@ -65,6 +65,6 @@ if __name__ == "__main__":
         name="PredictionAgent",
         data_file="../data.csv",
         model_file="../Machine_Learning_Model/Model.pkl",
-        interval=1,
+        interval=10,
     )
     agent.run()
