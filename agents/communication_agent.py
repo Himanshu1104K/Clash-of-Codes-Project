@@ -1,10 +1,17 @@
+# CommunicationAgent.py
+
 from uagents import Agent
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_file
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 import pandas as pd
 import threading
 import os
+import matplotlib
+
+matplotlib.use("Agg")  # Use Agg backend for rendering to file
+import matplotlib.pyplot as plt
+import io
 
 
 class CommunicationAgent(Agent):
@@ -19,9 +26,7 @@ class CommunicationAgent(Agent):
     ):
         super().__init__(name)
         self.data_file = data_file
-        self.prediction_agent = (
-            prediction_agent  # Reference to PredictionAgent to get latest prediction
-        )
+        self.prediction_agent = prediction_agent  # Reference to PredictionAgent
         self.host = host
         self.port = port
         self.app = Flask(name)
@@ -59,13 +64,57 @@ class CommunicationAgent(Agent):
         @self.app.route("/prediction", methods=["GET"])
         @jwt_required()
         def get_prediction():
-            if self.prediction_agent.latest_prediction is not None:
-                return (
-                    jsonify({"prediction": self.prediction_agent.latest_prediction}),
-                    200,
-                )
+            latest_pred = self.prediction_agent.get_latest_prediction()
+            if latest_pred is not None:
+                return jsonify({"prediction": latest_pred}), 200
             else:
                 return jsonify({"prediction": "No prediction available yet."}), 200
+
+        @self.app.route("/plot")
+        @jwt_required(optional=True)  # Optional authentication for plot
+        def plot_graph():
+            try:
+                # Acquire data and predictions
+                with self.data_lock:
+                    df = pd.read_csv(self.data_file)  # Read data file
+                predictions = self.prediction_agent.get_predictions()  # Get predictions
+
+                # Ensure there is data to plot
+                min_length = min(len(df), len(predictions))
+                if min_length == 0:
+                    return jsonify({"error": "No data or predictions available."}), 500
+
+                # Use the index of the dataframe as the count variable
+                count_variable = df.index[:min_length]  # x-axis: count or index
+                predicted_efficiency = predictions[:min_length]  # y-axis: predictions
+
+                # Normalize the predicted efficiency to be between 0 and 1
+                normalized_efficiency = [max(0, min(1, pred)) for pred in predicted_efficiency]
+
+                # Create line plot: Count (X) vs Normalized Predicted Efficiency (Y)
+                fig, ax = plt.subplots(figsize=(8, 6))
+                ax.plot(
+                    count_variable,
+                    normalized_efficiency,
+                    color="blue",
+                    linewidth=2,  # Line width for better visibility
+                    label="Predicted Efficiency",
+                )
+                ax.set_ylim(0, 1)  # Set y-axis limits to range from 0 to 1
+                ax.set_xlabel("Count")
+                ax.set_ylabel("Normalized Predicted Efficiency")
+                ax.set_title("Count vs Normalized Predicted Efficiency")
+                ax.legend()
+                plt.tight_layout()
+
+                # Save plot to BytesIO
+                img = io.BytesIO()
+                plt.savefig(img, format="png")
+                plt.close(fig)
+                img.seek(0)
+                return send_file(img, mimetype="image/png")
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
 
     def run(self):
         self.app.run(host=self.host, port=self.port)
@@ -77,8 +126,8 @@ if __name__ == "__main__":
     prediction_agent = PredictionAgent(
         name="PredictionAgent",
         data_file="../data.csv",
-        model_file="../Machine_Learning_Model/model.pkl",
-        interval=10,
+        model_file="../Machine_Learning_Model/Model.pkl",
+        interval=10,  # Changed to 10 seconds for demonstration purposes
     )
     communication_agent = CommunicationAgent(
         name="CommunicationAgent",
@@ -91,8 +140,8 @@ if __name__ == "__main__":
     # Run agents in separate threads
     import threading
 
-    t1 = threading.Thread(target=prediction_agent.run)
-    t2 = threading.Thread(target=communication_agent.run)
+    t1 = threading.Thread(target=prediction_agent.run, daemon=True)
+    t2 = threading.Thread(target=communication_agent.run, daemon=True)
 
     t1.start()
     t2.start()
