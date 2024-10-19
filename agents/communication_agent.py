@@ -89,7 +89,9 @@ class CommunicationAgent(Agent):
                 predicted_efficiency = predictions[:min_length]  # y-axis: predictions
 
                 # Normalize the predicted efficiency to be between 0 and 1
-                normalized_efficiency = [max(0, min(1, pred)) for pred in predicted_efficiency]
+                normalized_efficiency = [
+                    max(0, min(1, pred)) for pred in predicted_efficiency
+                ]
 
                 # Create line plot: Count (X) vs Normalized Predicted Efficiency (Y)
                 fig, ax = plt.subplots(figsize=(8, 6))
@@ -100,6 +102,7 @@ class CommunicationAgent(Agent):
                     linewidth=2,  # Line width for better visibility
                     label="Predicted Efficiency",
                 )
+                ax.axhline(y=0.3, color="red", linestyle="--", label="Critical Zone")
                 ax.set_ylim(0, 1)  # Set y-axis limits to range from 0 to 1
                 ax.set_xlabel("Count")
                 ax.set_ylabel("Normalized Predicted Efficiency")
